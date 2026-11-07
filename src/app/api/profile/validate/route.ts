@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    console.log("Received profile:", body);
-
     const result = profileSchema.safeParse(body);
 
     if (!result.success) {
@@ -26,17 +24,11 @@ export async function POST(request: NextRequest) {
       message: "Profile information is valid",
       profile: result.data,
     });
-
-  } catch (error) {
-    console.error("PROFILE API ERROR:", error);
-
+  } catch {
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid request",
-        debugMessage: error instanceof Error
-          ? error.message
-          : String(error),
+        error: "Invalid request. Please check your submitted information.",
       },
       { status: 400 }
     );

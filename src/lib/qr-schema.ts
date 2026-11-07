@@ -2,57 +2,44 @@
 import { z } from "zod";
 
 export const qrLinkSchema = z.object({
-  type: z.enum([
-    "website",
-    "linkedin",
-    "github",
-    "portfolio",
-    "email",
-    "phone",
-    "custom",
-  ]),
+  url: z
+    .string()
+    .trim()
+    .min(1, "URL is required")
+    .url("Enter a valid URL")
+    .refine(
+      (value) => {
+        try {
+          const parsedUrl = new URL(value);
 
-  label: z.string().trim().min(1, "Label is required"),
+          return (
+            parsedUrl.protocol === "http:" ||
+            parsedUrl.protocol === "https:"
+          );
+        } catch {
+          return false;
+        }
+      },
+      "Only HTTP and HTTPS URLs are supported"
+    ),
 
-  value: z.string().trim().min(1, "Value is required"),
-}).superRefine((data, ctx) => {
-
-  if (data.type === "email") {
-    if (!z.string().email().safeParse(data.value).success) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["value"],
-        message: "Enter a valid email address",
-      });
-    }
-  }
-
-  if (
-    ["website", "linkedin", "github", "portfolio", "custom"].includes(data.type)
-  ) {
-    if (!z.string().url().safeParse(data.value).success) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["value"],
-        message: "Enter a valid URL",
-      });
-    }
-  }
-
-  if (data.type === "phone") {
-    if (!/^\+?[0-9\s()-]{7,20}$/.test(data.value)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["value"],
-        message: "Enter a valid phone number",
-      });
-    }
-  }
-
+  displayName: z
+    .string()
+    .trim()
+    .max(50, "Display name must be under 50 characters")
+    .default(""),
 });
 
-export const qrLinksSchema = z.array(qrLinkSchema).min(1);
+export const qrLinksSchema = z
+  .array(qrLinkSchema)
+  .min(1, "Add at least one link");
+
 export const profileSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Cube name is required")
+    .max(100, "Cube name must be under 100 characters"),
+
   links: qrLinksSchema,
 });
