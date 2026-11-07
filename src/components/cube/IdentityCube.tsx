@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRef, Suspense } from "react";
@@ -5,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { Group } from "three";
 
 import CubeScene from "./CubeScene";
+import TriangularPyramidScene from "./TriangularPyramidScene";
 
 import type { GeneratedQR, FaceAssignments } from "@/lib/qr-types";
 import type { ShapeId } from "@/lib/shape-config";
@@ -22,45 +24,67 @@ export default function IdentityCube({
   qrCodes,
   assignments,
 }: IdentityCubeProps) {
-  const cubeRef = useRef<Group>(null);
+  const shapeRef = useRef<Group>(null);
 
-  function resetCube() {
-    if (!cubeRef.current) return;
-
-    cubeRef.current.rotation.set(0, 0, 0);
+  function resetView() {
+    if (shapeRef.current) {
+      shapeRef.current.rotation.set(0, 0, 0);
+    }
   }
 
   const isCube = selectedShape === "cube";
+  const isTriangularPyramid =
+    selectedShape === "triangular-pyramid";
 
   return (
     <section className="cube-viewer">
       <div className="cube-heading">
         <div>
           <p className="eyebrow">YOUR 3D IDENTITY</p>
-          <h2>Explore your {selectedShape.replaceAll("-", " ")}</h2>
+          <h2>
+            Explore your {selectedShape.replaceAll("-", " ")}
+          </h2>
         </div>
 
-        <button className="reset-button" onClick={resetCube}>
+        <button
+          type="button"
+          className="reset-button"
+          onClick={resetView}
+        >
           Reset view ↺
         </button>
       </div>
 
-      {isCube ? (
+      {isCube || isTriangularPyramid ? (
         <>
           <div className="cube-canvas">
             <Canvas
-              camera={{ position: [0, 0, 5], fov: 42 }}
+              camera={{
+                position: isTriangularPyramid
+                  ? [3, 2, 5]
+                  : [0, 0, 5],
+                fov: 42,
+              }}
               dpr={[1, 2]}
             >
               <color attach="background" args={["#F5F0E9"]} />
 
               <Suspense fallback={null}>
-                <CubeScene
-                  cubeRef={cubeRef}
-                  cubeName={cubeName}
-                  qrCodes={qrCodes}
-                  assignments={assignments}
-                />
+                {isCube ? (
+                  <CubeScene
+                    cubeRef={shapeRef}
+                    cubeName={cubeName}
+                    qrCodes={qrCodes}
+                    assignments={assignments}
+                  />
+                ) : (
+                  <TriangularPyramidScene
+                    cubeRef={shapeRef}
+                    cubeName={cubeName}
+                    qrCodes={qrCodes}
+                    assignments={assignments}
+                  />
+                )}
               </Suspense>
             </Canvas>
           </div>
@@ -73,8 +97,8 @@ export default function IdentityCube({
         <div className="shape-preview-notice">
           <h3>{selectedShape.replaceAll("-", " ")}</h3>
           <p>
-            Face assignments are ready. The interactive 3D geometry
-            for this shape will be added in Checkpoint 2.
+            Interactive 3D geometry for this shape will
+            be added in the next checkpoint.
           </p>
         </div>
       )}
