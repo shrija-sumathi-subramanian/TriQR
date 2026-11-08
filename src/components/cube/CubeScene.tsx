@@ -1,42 +1,71 @@
 "use client";
 
-import { RefObject } from "react";
-import { Group, DoubleSide } from "three";
-import { OrbitControls, Text, useTexture } from "@react-three/drei";
+import { DoubleSide, Euler, Group, Quaternion } from "three";
+import type { RefObject } from "react";
+import useFaceCameraRotation from "./useFaceCameraRotation";
+
+import {
+  OrbitControls,
+  RoundedBox,
+  Text,
+  useTexture,
+} from "@react-three/drei";
 
 import type { GeneratedQR, FaceAssignments } from "@/lib/qr-types";
+import type { AppearanceSettings } from "@/lib/appearance-types";
 
 type CubeSceneProps = {
   cubeRef: RefObject<Group | null>;
   cubeName: string;
   qrCodes: GeneratedQR[];
   assignments: FaceAssignments;
+  appearance: AppearanceSettings;
+  finishSettings: {
+    roughness: number;
+    metalness: number;
+  };
+  selectedFaceId: string;
+  onFaceSelect?: (faceId: string) => void;
 };
 
 type FaceProps = {
+  faceId: string;
   position: [number, number, number];
   rotation: [number, number, number];
   qr?: GeneratedQR;
+  appearance: AppearanceSettings;
+  selectedFaceId: string;
+  onSelect: (faceId: string, faceRotation: Quaternion) => void;
 };
 
-function QRFace({ qr }: { qr: GeneratedQR }) {
+function QRFace({
+  qr,
+  appearance,
+}: {
+  qr: GeneratedQR;
+  appearance: AppearanceSettings;
+}) {
   const texture = useTexture(qr.qrCode);
 
   return (
     <group>
       <Text
-        position={[0, 0.77, 0.025]}
-        fontSize={0.17}
-        color="#2B2118"
+        position={[0, 0.62, 0.025]}
+        fontSize={appearance.fontSize}
+        color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
         maxWidth={1.9}
+        textAlign="center"
+        fontWeight={
+          appearance.font === "bold-display" ? "bold" : "normal"
+        }
       >
         {qr.displayName || " "}
       </Text>
 
       <mesh position={[0, -0.12, 0.025]}>
-        <planeGeometry args={[1.35, 1.35]} />
+        <planeGeometry args={[1.3, 1.3]} />
         <meshBasicMaterial
           map={texture}
           side={DoubleSide}
@@ -47,27 +76,61 @@ function QRFace({ qr }: { qr: GeneratedQR }) {
   );
 }
 
-function CubeFace({ position, rotation, qr }: FaceProps) {
+function CubeFace({
+  faceId,
+  position,
+  rotation,
+  qr,
+  appearance,
+  selectedFaceId,
+  onSelect,
+}: FaceProps) {
   return (
-    <group position={position} rotation={rotation}>
+    <group
+      position={position}
+      rotation={rotation}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(faceId, new Quaternion().setFromEuler(new Euler(...rotation)));
+      }}
+    >
       <mesh>
-        <planeGeometry args={[2.35, 2.35]} />
-        <meshStandardMaterial
-          color="#FFFFFF"
-          roughness={0.8}
+        <planeGeometry args={[2.12, 2.12]} />
+
+        <meshPhysicalMaterial
+          color={appearance.color}
+          roughness={
+            appearance.finish === "matte"
+              ? 0.9
+              : appearance.finish === "glossy"
+                ? 0.18
+                : 0.28
+          }
+          metalness={
+            appearance.finish === "metallic"
+              ? 0.85
+              : appearance.finish === "glossy"
+                ? 0.05
+                : 0
+          }
           side={DoubleSide}
         />
       </mesh>
 
       {qr ? (
-        <QRFace qr={qr} />
+        <QRFace qr={qr} appearance={appearance} />
       ) : (
         <Text
           position={[0, 0, 0.025]}
-          fontSize={0.16}
-          color="#82776D"
+          fontSize={appearance.fontSize}
+          color={appearance.fontColor}
           anchorX="center"
           anchorY="middle"
+          maxWidth={1.8}
+          textAlign="center"
+          fontWeight={
+            appearance.font === "bold-display" ? "bold" : "normal"
+          }
         >
           Empty face
         </Text>
@@ -81,75 +144,131 @@ export default function CubeScene({
   cubeName,
   qrCodes,
   assignments,
+  appearance,
+  finishSettings,
+  selectedFaceId,
+  onFaceSelect,
 }: CubeSceneProps) {
+  const { rootRef, rotateFace } = useFaceCameraRotation(cubeRef);
+
+  function handleFaceSelect(faceId: string, faceRotation: Quaternion) {
+    onFaceSelect?.(faceId);
+    rotateFace(faceRotation);
+  }
+
   function getQr(faceId: string) {
     const qrId = assignments[faceId];
-
     return qrCodes.find((qr) => qr.id === qrId);
   }
 
+
   return (
     <>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[4, 5, 6]} intensity={2} />
+      <ambientLight intensity={1.2} />
 
-      <group ref={cubeRef}>
-        {/* Front face: cube name only */}
-        <group position={[0, 0, 1.21]}>
+      <directionalLight
+        position={[4, 5, 6]}
+        intensity={0.9}
+      />
+
+      <group ref={rootRef}>
+        {/* Rounded solid cube body */}
+        <RoundedBox
+          args={[2.4, 2.4, 2.4]}
+          radius={0.14}
+          smoothness={8}
+        >
+          <meshPhysicalMaterial
+            color={appearance.color}
+            roughness={finishSettings.roughness}
+            metalness={finishSettings.metalness}
+            clearcoat={appearance.finish === "glossy" ? 0.8 : 0}
+            clearcoatRoughness={0.15}
+          />
+        </RoundedBox>
+
+        {/* Reserved name face */}
+        <group
+          position={[0, 0, 1.205]}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleFaceSelect("name-face", new Quaternion());
+          }}
+        >
           <mesh>
-            <planeGeometry args={[2.35, 2.35]} />
-            <meshStandardMaterial
-              color="#E39B67"
-              roughness={0.8}
+            <planeGeometry args={[2.12, 2.12]} />
+            <meshPhysicalMaterial
+              color={appearance.color}
+              roughness={finishSettings.roughness}
+              metalness={finishSettings.metalness}
               side={DoubleSide}
             />
           </mesh>
 
           <Text
             position={[0, 0, 0.025]}
-            fontSize={0.3}
-            color="#2B2118"
+            fontSize={appearance.fontSize}
+            color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
             maxWidth={1.9}
+            textAlign="center"
+            fontWeight={
+              appearance.font === "bold-display" ? "bold" : "normal"
+            }
           >
             {cubeName || "Your Identity"}
           </Text>
         </group>
 
-        {/* Back */}
         <CubeFace
-          position={[0, 0, -1.21]}
+          faceId="face-2"
+          position={[0, 0, -1.205]}
           rotation={[0, Math.PI, 0]}
           qr={getQr("face-2")}
+          appearance={appearance}
+          selectedFaceId={selectedFaceId}
+          onSelect={handleFaceSelect}
         />
 
-        {/* Right */}
         <CubeFace
-          position={[1.21, 0, 0]}
+          faceId="face-3"
+          position={[1.205, 0, 0]}
           rotation={[0, Math.PI / 2, 0]}
           qr={getQr("face-3")}
+          appearance={appearance}
+          selectedFaceId={selectedFaceId}
+          onSelect={handleFaceSelect}
         />
 
-        {/* Left */}
         <CubeFace
-          position={[-1.21, 0, 0]}
+          faceId="face-4"
+          position={[-1.205, 0, 0]}
           rotation={[0, -Math.PI / 2, 0]}
           qr={getQr("face-4")}
+          appearance={appearance}
+          selectedFaceId={selectedFaceId}
+          onSelect={handleFaceSelect}
         />
 
-        {/* Top */}
         <CubeFace
-          position={[0, 1.21, 0]}
+          faceId="face-5"
+          position={[0, 1.205, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           qr={getQr("face-5")}
+          appearance={appearance}
+          selectedFaceId={selectedFaceId}
+          onSelect={handleFaceSelect}
         />
 
-        {/* Bottom */}
         <CubeFace
-          position={[0, -1.21, 0]}
+          faceId="face-6"
+          position={[0, -1.205, 0]}
           rotation={[Math.PI / 2, 0, 0]}
           qr={getQr("face-6")}
+          appearance={appearance}
+          selectedFaceId={selectedFaceId}
+          onSelect={handleFaceSelect}
         />
       </group>
 
