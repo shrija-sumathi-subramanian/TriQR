@@ -75,31 +75,44 @@ function getFinish(finish: AppearanceSettings["finish"]) {
 function QRContent({
   qr,
   appearance,
+  faceWidth,
+  faceHeight,
+  faceId,
 }: {
   qr: GeneratedQR;
   appearance: AppearanceSettings;
+  faceWidth: number;
+  faceHeight: number;
+  faceId?: string;
 }) {
   const texture = useTexture(qr.qrCode);
-  const textSize = appearance.fontSize * 0.35;
+  const faceUnit = Math.min(faceWidth, faceHeight);
+  const textSize = Math.min(appearance.fontSize * 0.28, faceUnit * 0.075);
+  const qrSize = faceUnit * 0.27;
 
   return (
     <group>
       <Text
-        position={[0, 0.26, 0.035]}
+        position={[0, faceHeight * 0.19, 0.035]}
         fontSize={textSize}
         color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
-        maxWidth={1.3}
+        maxWidth={faceWidth * 0.46}
+        textAlign="center"
         fontWeight={
           appearance.font === "bold-display" ? "bold" : "normal"
         }
+        overflowWrap="break-word"
       >
         {qr.displayName || " "}
       </Text>
 
-      <mesh position={[0, -0.20, 0.035]}>
-        <planeGeometry args={[0.62, 0.62]} />
+      <mesh
+        name={faceId ? `TriQR_QR_${faceId}` : "TriQR_QR"}
+        position={[0, -faceHeight * 0.105, 0.035]}
+      >
+        <planeGeometry args={[qrSize, qrSize]} />
         <meshBasicMaterial
           map={texture}
           side={DoubleSide}
@@ -120,9 +133,7 @@ function TriangleFace({
   selectedFaceId,
   onSelect,
 }: TriangleFaceProps) {
-  const textSize = appearance.fontSize * 0.35;
-
-  const { geometry, center, rotation, normal } = useMemo(() => {
+  const { geometry, center, rotation, normal, width, height } = useMemo(() => {
     const [a, b, c] = points.map(
       (point) => new Vector3(...point)
     );
@@ -174,14 +185,37 @@ function TriangleFace({
 
     const rotation = new Quaternion().setFromRotationMatrix(matrix);
 
-    return { geometry, center, rotation, normal };
+    const localPoints = insetPoints.map((point) => {
+      const relative = point.clone().sub(center);
+      return {
+        x: relative.dot(right),
+        y: relative.dot(correctedUp),
+      };
+    });
+    const width = Math.max(...localPoints.map((point) => point.x)) -
+      Math.min(...localPoints.map((point) => point.x));
+    const height = Math.max(...localPoints.map((point) => point.y)) -
+      Math.min(...localPoints.map((point) => point.y));
+
+    return { geometry, center, rotation, normal, width, height };
   }, [points]);
 
   const finish = getFinish(appearance.finish);
+  const faceUnit = Math.min(width, height);
+  const textSize = Math.min(appearance.fontSize * 0.28, faceUnit * 0.075);
 
   return (
-    <group>
+    <group
+      name={`TriQR_Face_${faceId}`}
+      userData={{
+        triqrFaceId: faceId,
+        triqrNormal: [normal.x, normal.y, normal.z],
+        triqrRotation: [rotation.x, rotation.y, rotation.z, rotation.w],
+        triqrIsNameFace: isNameFace,
+      }}
+    >
       <mesh
+        name={`TriQR_FaceSurface_${faceId}`}
         geometry={geometry}
         position={normal.clone().multiplyScalar(0.008)}
         onClick={(event) => {
@@ -210,7 +244,9 @@ function TriangleFace({
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={1.2}
+            maxWidth={width * 0.46}
+            textAlign="center"
+            overflowWrap="break-word"
             fontWeight={
               appearance.font === "bold-display" ? "bold" : "normal"
             }
@@ -218,7 +254,13 @@ function TriangleFace({
             {cubeName || "Your Identity"}
           </Text>
         ) : qr ? (
-          <QRContent qr={qr} appearance={appearance} />
+          <QRContent
+            qr={qr}
+            appearance={appearance}
+            faceWidth={width}
+            faceHeight={height}
+            faceId={faceId}
+          />
         ) : (
           <Text
             position={[0, 0, 0.035]}
@@ -226,6 +268,9 @@ function TriangleFace({
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
+            maxWidth={width * 0.42}
+            textAlign="center"
+            overflowWrap="break-word"
             fontWeight={
               appearance.font === "bold-display" ? "bold" : "normal"
             }
@@ -329,7 +374,7 @@ export default function TriangularPyramidScene({
 
       <group ref={cubeRef}>
         {/* Solid tetrahedron body */}
-        <mesh geometry={solidGeometry}>
+        <mesh name="TriQR_Body" geometry={solidGeometry}>
           <meshPhysicalMaterial
             color={appearance.color}
             roughness={finish.roughness}

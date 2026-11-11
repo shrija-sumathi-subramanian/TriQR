@@ -4,6 +4,8 @@ import { useEffect, useMemo } from "react";
 
 import {
   BufferGeometry,
+  ConeGeometry,
+  CylinderGeometry,
   DodecahedronGeometry,
   IcosahedronGeometry,
   OctahedronGeometry,
@@ -46,6 +48,7 @@ type FaceData = {
   rotation: Quaternion;
   width: number;
   height: number;
+  vertexCount: number;
   geometry: BufferGeometry;
 };
 
@@ -57,6 +60,22 @@ type FaceGroup = {
 
 function getGeometry(shape: ShapeId): BufferGeometry {
   switch (shape) {
+    case "square-pyramid":
+      // Four triangular sides and one square base.
+      return new ConeGeometry(1.35, 1.8, 4, 1, false);
+
+    case "triangular-prism":
+      // Two triangular ends and three rectangular sides.
+      return new CylinderGeometry(1.15, 1.15, 1.8, 3, 1, false);
+
+    case "pentagonal-prism":
+      // Two pentagonal ends and five rectangular sides.
+      return new CylinderGeometry(1.15, 1.15, 1.8, 5, 1, false);
+
+    case "hexagonal-prism":
+      // Two hexagonal ends and six rectangular sides.
+      return new CylinderGeometry(1.15, 1.15, 1.8, 6, 1, false);
+
     case "octahedron":
       return new OctahedronGeometry(1.35, 0);
 
@@ -67,7 +86,7 @@ function getGeometry(shape: ShapeId): BufferGeometry {
       return new IcosahedronGeometry(1.35, 0);
 
     default:
-      return new OctahedronGeometry(1.35, 0);
+      throw new Error(`Unsupported polyhedron shape: ${shape}`);
   }
 }
 
@@ -238,6 +257,7 @@ function createFaceData(source: BufferGeometry): FaceData[] {
       rotation,
       width,
       height,
+      vertexCount: uniqueVertices.length,
       geometry: faceGeometry,
     };
   });
@@ -254,28 +274,33 @@ function QRFaceContent({
 }) {
   const texture = useTexture(qr.qrCode);
 
-  const baseFontSize = appearance.fontSize * 0.35;
+  const baseFontSize = appearance.fontSize * 0.30;
+  const isTriangle = face.vertexCount === 3;
 
-  const qrSize = Math.min(
-    face.width * 0.42,
-    face.height * 0.36
-  );
+  // Triangular faces narrow toward their edges. Keep the QR in the
+  // central safe area instead of sizing it from the full bounding box.
+  const qrSize = isTriangle
+    ? Math.min(face.width * 0.30, face.height * 0.30)
+    : Math.min(face.width * 0.36, face.height * 0.32);
 
   const labelSize = Math.min(
     baseFontSize,
-    face.width * 0.095,
-    face.height * 0.12
+    face.width * (isTriangle ? 0.075 : 0.085),
+    face.height * 0.095
   );
+
+  const labelY = isTriangle ? face.height * 0.29 : face.height * 0.27;
+  const qrY = isTriangle ? -face.height * 0.075 : -face.height * 0.09;
 
   return (
     <group>
       <Text
-        position={[0, face.height * 0.15, 0.025]}
+        position={[0, labelY, 0.035]}
         fontSize={labelSize}
         color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
-        maxWidth={face.width * 0.68}
+        maxWidth={face.width * (isTriangle ? 0.58 : 0.72)}
         textAlign="center"
         fontWeight={
           appearance.font === "bold-display" ? "bold" : "normal"
@@ -285,7 +310,10 @@ function QRFaceContent({
         {qr.displayName || " "}
       </Text>
 
-      <mesh position={[0, -face.height * 0.20, 0.025]}>
+      <mesh
+        name={`TriQR_QR_${face.id}`}
+        position={[0, qrY, 0.035]}
+      >
         <planeGeometry args={[qrSize, qrSize]} />
 
         <meshBasicMaterial
@@ -326,10 +354,19 @@ function PolyhedronFace({
   );
 
   return (
-    <group>
+    <group
+      name={`TriQR_Face_${face.id}`}
+      userData={{
+        triqrFaceId: face.id,
+        triqrNormal: [face.normal.x, face.normal.y, face.normal.z],
+        triqrRotation: [face.rotation.x, face.rotation.y, face.rotation.z, face.rotation.w],
+        triqrIsNameFace: face.id === "name-face",
+      }}
+    >
       <mesh
+        name={`TriQR_FaceSurface_${face.id}`}
         geometry={face.geometry}
-        position={face.normal.clone().multiplyScalar(0.009)}
+        position={face.normal.clone().multiplyScalar(0.012)}
         onClick={(event) => {
           event.stopPropagation();
           onFaceSelect?.(face.id, face.rotation);
@@ -348,12 +385,12 @@ function PolyhedronFace({
       <group
         position={face.center
           .clone()
-          .add(face.normal.clone().multiplyScalar(0.018))}
+          .add(face.normal.clone().multiplyScalar(0.024))}
         quaternion={face.rotation}
       >
         {face.id === "name-face" ? (
           <Text
-            position={[0, 0, 0.025]}
+            position={[0, 0, 0.035]}
             fontSize={textSize}
             color={appearance.fontColor}
             anchorX="center"
@@ -375,7 +412,7 @@ function PolyhedronFace({
           />
         ) : (
           <Text
-            position={[0, 0, 0.025]}
+            position={[0, 0, 0.035]}
             fontSize={textSize}
             color={appearance.fontColor}
             anchorX="center"
@@ -447,7 +484,7 @@ export default function PolyhedronScene({
       <Environment preset="studio" />
 
       <group ref={rootRef}>
-        <mesh geometry={bodyGeometry}>
+        <mesh name="TriQR_Body" geometry={bodyGeometry}>
           <meshPhysicalMaterial
             color={appearance.color}
             roughness={finish.roughness}

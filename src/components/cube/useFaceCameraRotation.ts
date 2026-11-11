@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   Group,
@@ -19,6 +19,13 @@ export default function useFaceCameraRotation(
   const targetRotation = useRef<Quaternion | null>(null);
 
   const { camera } = useThree();
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (root && !root.userData.initialQuaternion) {
+      root.userData.initialQuaternion = root.quaternion.clone();
+    }
+  }, [rootRef]);
 
   const rotateFace = useCallback(
     (localFaceRotation: Quaternion) => {

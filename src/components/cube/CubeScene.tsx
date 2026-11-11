@@ -41,9 +41,11 @@ type FaceProps = {
 function QRFace({
   qr,
   appearance,
+  faceId,
 }: {
   qr: GeneratedQR;
   appearance: AppearanceSettings;
+  faceId?: string;
 }) {
   const texture = useTexture(qr.qrCode);
 
@@ -64,7 +66,10 @@ function QRFace({
         {qr.displayName || " "}
       </Text>
 
-      <mesh position={[0, -0.12, 0.025]}>
+      <mesh
+        name={faceId ? `TriQR_QR_${faceId}` : "TriQR_QR"}
+        position={[0, -0.12, 0.025]}
+      >
         <planeGeometry args={[1.3, 1.3]} />
         <meshBasicMaterial
           map={texture}
@@ -85,16 +90,24 @@ function CubeFace({
   selectedFaceId,
   onSelect,
 }: FaceProps) {
+  const quat = new Quaternion().setFromEuler(new Euler(...rotation));
+
   return (
     <group
+      name={`TriQR_Face_${faceId}`}
+      userData={{
+        triqrFaceId: faceId,
+        triqrRotation: [quat.x, quat.y, quat.z, quat.w],
+        triqrIsNameFace: false,
+      }}
       position={position}
       rotation={rotation}
       onClick={(event) => {
         event.stopPropagation();
-        onSelect(faceId, new Quaternion().setFromEuler(new Euler(...rotation)));
+        onSelect(faceId, quat);
       }}
     >
-      <mesh>
+      <mesh name={`TriQR_FaceSurface_${faceId}`}>
         <planeGeometry args={[2.12, 2.12]} />
 
         <meshPhysicalMaterial
@@ -118,7 +131,7 @@ function CubeFace({
       </mesh>
 
       {qr ? (
-        <QRFace qr={qr} appearance={appearance} />
+        <QRFace qr={qr} appearance={appearance} faceId={faceId} />
       ) : (
         <Text
           position={[0, 0, 0.025]}
@@ -174,6 +187,7 @@ export default function CubeScene({
       <group ref={rootRef}>
         {/* Rounded solid cube body */}
         <RoundedBox
+          name="TriQR_Body"
           args={[2.4, 2.4, 2.4]}
           radius={0.14}
           smoothness={8}
@@ -189,13 +203,19 @@ export default function CubeScene({
 
         {/* Reserved name face */}
         <group
+          name="TriQR_Face_name-face"
+          userData={{
+            triqrFaceId: "name-face",
+            triqrRotation: [0, 0, 0, 1],
+            triqrIsNameFace: true,
+          }}
           position={[0, 0, 1.205]}
           onClick={(event) => {
             event.stopPropagation();
             handleFaceSelect("name-face", new Quaternion());
           }}
         >
-          <mesh>
+          <mesh name="TriQR_FaceSurface_name-face">
             <planeGeometry args={[2.12, 2.12]} />
             <meshPhysicalMaterial
               color={appearance.color}

@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Group } from "three";
+import type { Group } from "three";
 
 import CubeScene from "./CubeScene";
 import TriangularPyramidScene from "./TriangularPyramidScene";
 import PolyhedronScene from "./PolyhedronScene";
 import AppearanceControls from "./AppearanceControls";
+import DownloadOptions from "./DownloadOptions";
 
 import type { GeneratedQR, FaceAssignments } from "@/lib/qr-types";
 import type { ShapeId } from "@/lib/shape-config";
@@ -31,15 +32,12 @@ export default function IdentityCube({
   assignments,
 }: IdentityCubeProps) {
   const [resetKey, setResetKey] = useState(0);
+  const [selectedFaceId, setSelectedFaceId] = useState("name-face");
+  const [appearance, setAppearance] = useState<AppearanceSettings>(
+    () => createDefaultAppearance(selectedShape)
+  );
 
-  const [selectedFaceId, setSelectedFaceId] =
-    useState("name-face");
-
-  const [appearance, setAppearance] =
-    useState<AppearanceSettings>(
-      () => createDefaultAppearance(selectedShape)
-    );
-
+  // Shared root ref: used by face rotation and by the GLB/HTML/ZIP exporter.
   const shapeRef = useRef<Group | null>(null);
 
   useEffect(() => {
@@ -48,9 +46,7 @@ export default function IdentityCube({
   }, [selectedShape]);
 
   const isCube = selectedShape === "cube";
-
-  const isTriangularPyramid =
-    selectedShape === "triangular-pyramid";
+  const isTriangularPyramid = selectedShape === "triangular-pyramid";
 
   function resetAppearance() {
     setAppearance(createDefaultAppearance(selectedShape));
@@ -64,7 +60,6 @@ export default function IdentityCube({
         : appearance.finish === "glossy"
           ? 0.18
           : 0.28,
-
     metalness:
       appearance.finish === "metallic"
         ? 0.85
@@ -82,12 +77,8 @@ export default function IdentityCube({
       <div className="cube-heading">
         <div>
           <p className="eyebrow">YOUR 3D IDENTITY</p>
-
           <h2>{shapeTitle}</h2>
-
-          <p className="cube-subheading">
-            Rotate and pinch to explore.
-          </p>
+          <p className="cube-subheading">Rotate and pinch to explore.</p>
         </div>
 
         <button
@@ -104,17 +95,12 @@ export default function IdentityCube({
           key={resetKey}
           shadows
           camera={{
-            position: isCube
-              ? [0, 0, 5]
-              : [3.5, 2.5, 6],
+            position: isCube ? [0, 0, 5] : [3.5, 2.5, 6],
             fov: 38,
           }}
           dpr={[1, 2]}
         >
-          <color
-            attach="background"
-            args={["#F5F0E9"]}
-          />
+          <color attach="background" args={["#F5F0E9"]} />
 
           <Suspense fallback={null}>
             {isCube ? (
@@ -155,17 +141,9 @@ export default function IdentityCube({
       </div>
 
       <div className="cube-instructions">
-        <p>
-          <strong>Explore your shape</strong>
-        </p>
-
-        <p>
-          Drag to rotate · Click a face to bring it forward
-        </p>
-
-        <p>
-          Scroll or pinch to zoom · Reset to original view
-        </p>
+        <p><strong>Explore your shape</strong></p>
+        <p>Drag to rotate · Click a face to bring it forward</p>
+        <p>Scroll or pinch to zoom · Reset to original view</p>
       </div>
 
       <AppearanceControls
@@ -175,6 +153,12 @@ export default function IdentityCube({
         onSelectedFaceChange={setSelectedFaceId}
         onAppearanceChange={setAppearance}
         onReset={resetAppearance}
+      />
+
+      <DownloadOptions
+        modelRef={shapeRef}
+        modelName={cubeName || "triqr-identity"}
+        shapeName={shapeTitle}
       />
     </section>
   );
