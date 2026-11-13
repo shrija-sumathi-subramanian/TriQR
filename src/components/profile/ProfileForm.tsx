@@ -37,16 +37,20 @@ type QRResponse = {
 
 type ProfileFormProps = {
   capacity: number;
+  initialName?: string;
+  onNameChange?: (name: string) => void;
   onGenerated: (name: string, qrCodes: GeneratedQR[]) => void;
   onQrCodesChange: (qrCodes: GeneratedQR[]) => void;
 };
 
 export default function ProfileForm({
   capacity,
+  initialName,
+  onNameChange,
   onGenerated,
   onQrCodesChange,
 }: ProfileFormProps) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName || "");
 
   const [links, setLinks] = useState<ProfileLink[]>([
     { id: 1, displayName: "", url: "" },
@@ -306,11 +310,11 @@ export default function ProfileForm({
 
       if (failedCount > 0) {
         setMessage(
-          `${qrResult.totalGenerated} QR code(s) generated successfully. ${failedCount} URL(s) could not be identified, but their QR codes are ready.`
+          `✓ ${qrResult.totalGenerated} QR codes generated. ${failedCount} link(s) saved with custom names.`
         );
       } else {
         setMessage(
-          `Success! All links identified and ${qrResult.totalGenerated} QR codes generated.`
+          `✓ Success! All links identified and ${qrResult.totalGenerated} QR codes generated.`
         );
       }
     } catch (err) {
@@ -325,62 +329,52 @@ export default function ProfileForm({
   }
 
   return (
-    <section
+    <div
       className="profile-section"
-      id="create-profile"
+      id="identity"
     >
-      <div className="profile-heading">
-        <p className="eyebrow">LET'S GET STARTED</p>
-
-        <h2>Create your identity</h2>
-
-        <p>
-          Name your 3D model and add up to {capacity} URLs.
-        </p>
-      </div>
-
       <form
         className="profile-form"
         onSubmit={handleSubmit}
       >
         {/* 3D model name */}
+        <div className="form-field-group">
+          <label
+            className="form-label"
+            htmlFor="profile-name"
+          >
+            Identity name
+          </label>
 
-        <label
-          className="form-label"
-          htmlFor="profile-name"
-        >
-          Name your 3D model
-        </label>
+          <input
+            id="profile-name"
+            className="form-input"
+            type="text"
+            placeholder="e.g. Alex Rivera, Design Studio, Portfolio"
+            value={name}
+            onChange={(event) => {
+              const nextVal = event.target.value;
+              setName(nextVal);
+              onNameChange?.(nextVal);
+              setMessage("");
+              setError("");
+            }}
+            maxLength={100}
+            required
+            disabled={loading}
+          />
 
-        <input
-          id="profile-name"
-          className="form-input"
-          type="text"
-          placeholder="e.g. Contacts, My Digital Identity"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setMessage("");
-            setError("");
-          }}
-          maxLength={100}
-          required
-          disabled={loading}
-        />
-
-        <p className="form-hint">
-          This name will appear on the front face of your model.
-        </p>
+          <p className="form-hint">
+            Appears on the front face of your 3D model.
+          </p>
+        </div>
 
         {/* URL collection */}
-
-        <div className="links-heading">
+        <div className="links-heading" id="links">
           <div>
             <h3>Your links</h3>
-
             <p>
-              Add your URLs. TriQR will identify them and
-              suggest names automatically.
+              Add up to {capacity} URLs. Platforms are detected automatically.
             </p>
           </div>
 
@@ -388,7 +382,7 @@ export default function ProfileForm({
             type="button"
             className="add-link-button"
             onClick={addLink}
-            disabled={loading}
+            disabled={loading || links.length >= capacity}
           >
             + Add URL
           </button>
@@ -479,7 +473,7 @@ export default function ProfileForm({
                     className="form-label"
                     htmlFor={`display-name-${link.id}`}
                   >
-                    Suggested display name
+                    Face label
                   </label>
 
                   <input
@@ -499,15 +493,14 @@ export default function ProfileForm({
                   />
 
                   <p className="form-hint">
-                    You can edit this name or keep the suggestion.
+                    Text shown above the QR code on this face.
                   </p>
                 </div>
               )}
 
               {identificationFailed && (
                 <p className="form-error">
-                  Could not identify this URL. You can still
-                  keep the link and edit its name.
+                  Could not identify this URL. You can still keep the link and edit its label.
                 </p>
               )}
             </div>
@@ -527,9 +520,17 @@ export default function ProfileForm({
           type="submit"
           disabled={loading}
         >
-          {loading
-            ? "Identifying links and generating QR codes..."
-            : "Identify links & generate QR codes →"}
+          {loading ? (
+            <>
+              <span className="button-spinner" aria-hidden="true" />
+              <span>Identifying links & generating QR codes...</span>
+            </>
+          ) : (
+            <>
+              <span>Identify links & generate QR codes</span>
+              <span className="button-arrow" aria-hidden="true">→</span>
+            </>
+          )}
         </button>
       </form>
 
@@ -543,8 +544,7 @@ export default function ProfileForm({
             <h2>Generated QR codes</h2>
 
             <p>
-              Each QR code contains its original URL.
-              Scan it with your phone to open the link.
+              Each code links directly to your destination URL. Scan with a phone camera to test.
             </p>
           </div>
 
@@ -571,6 +571,6 @@ export default function ProfileForm({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

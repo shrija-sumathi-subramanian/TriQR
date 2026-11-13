@@ -63,13 +63,13 @@
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 1000);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 1.4));
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.6);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 0.95));
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight1.position.set(4, 6, 5);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
-    dirLight2.position.set(-4, -2, -3);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dirLight2.position.set(-4, 2, -3);
     scene.add(dirLight2);
 
     const controls = new OrbitControls(camera, renderer.domElement);

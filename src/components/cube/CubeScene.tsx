@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 import useFaceCameraRotation from "./useFaceCameraRotation";
 
 import {
+  Environment,
   OrbitControls,
   RoundedBox,
   Text,
@@ -13,6 +14,7 @@ import {
 
 import type { GeneratedQR, FaceAssignments } from "@/lib/qr-types";
 import type { AppearanceSettings } from "@/lib/appearance-types";
+import { getCubeFaceLayout } from "@/lib/face-text-layout";
 
 type CubeSceneProps = {
   cubeRef: RefObject<Group | null>;
@@ -48,17 +50,22 @@ function QRFace({
   faceId?: string;
 }) {
   const texture = useTexture(qr.qrCode);
+  const layout = getCubeFaceLayout(
+    appearance.fontSize,
+    qr.displayName || ""
+  );
 
   return (
     <group>
       <Text
-        position={[0, 0.62, 0.025]}
-        fontSize={appearance.fontSize}
+        position={layout.labelPosition}
+        fontSize={layout.labelFontSize}
         color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
-        maxWidth={1.9}
+        maxWidth={layout.labelMaxWidth}
         textAlign="center"
+        overflowWrap="break-word"
         fontWeight={
           appearance.font === "bold-display" ? "bold" : "normal"
         }
@@ -68,9 +75,9 @@ function QRFace({
 
       <mesh
         name={faceId ? `TriQR_QR_${faceId}` : "TriQR_QR"}
-        position={[0, -0.12, 0.025]}
+        position={layout.qrPosition}
       >
-        <planeGeometry args={[1.3, 1.3]} />
+        <planeGeometry args={[layout.qrSize, layout.qrSize]} />
         <meshBasicMaterial
           map={texture}
           side={DoubleSide}
@@ -175,14 +182,27 @@ export default function CubeScene({
   }
 
 
+  const nameLayout = getCubeFaceLayout(
+    appearance.fontSize,
+    "",
+    cubeName || "Your Identity"
+  );
+
   return (
     <>
-      <ambientLight intensity={1.2} />
+      <ambientLight intensity={0.95} />
 
       <directionalLight
-        position={[4, 5, 6]}
-        intensity={0.9}
+        position={[4, 6, 5]}
+        intensity={1.0}
       />
+
+      <directionalLight
+        position={[-4, 2, -3]}
+        intensity={0.35}
+      />
+
+      <Environment preset="studio" />
 
       <group ref={rootRef}>
         {/* Rounded solid cube body */}
@@ -226,13 +246,14 @@ export default function CubeScene({
           </mesh>
 
           <Text
-            position={[0, 0, 0.025]}
-            fontSize={appearance.fontSize}
+            position={nameLayout.namePosition}
+            fontSize={nameLayout.nameFontSize}
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={1.9}
+            maxWidth={nameLayout.nameMaxWidth}
             textAlign="center"
+            overflowWrap="break-word"
             fontWeight={
               appearance.font === "bold-display" ? "bold" : "normal"
             }

@@ -49,18 +49,10 @@ export default function FaceAssignment({
   }
 
   return (
-    <section className="assignment-section">
-      <div className="profile-heading">
-        <p className="eyebrow">MAKE IT YOURS</p>
-
-        <h2>Assign your QR codes</h2>
-
-        <p>
-          Choose which links appear on your{" "}
-          {selectedShape.replaceAll("-", " ")}.
-          The first face is reserved for your model name.
-        </p>
-      </div>
+    <div className="assignment-section">
+      <p className="assignment-hint">
+        Face 1 is reserved for your identity name. Assign your generated links to the remaining faces below.
+      </p>
 
       {qrCodes.length === 0 ? (
         <p className="assignment-empty">
@@ -114,6 +106,6 @@ export default function FaceAssignment({
           </div>
         </>
       )}
-    </section>
+    </div>
   );
 }

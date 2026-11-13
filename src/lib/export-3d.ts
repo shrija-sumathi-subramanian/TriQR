@@ -102,12 +102,25 @@ export function convertTroikaTextToMesh(troikaObj: Object3D): Mesh | null {
 
   ctx.font = `${isBold ? "bold " : ""}${fontPixelSize}px ${fontFamily}`;
 
-  // Word wrapping
+  // Word wrapping with safety against long continuous tokens
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let currentLine = "";
 
-  for (const word of words) {
+  for (let word of words) {
+    while (ctx.measureText(word).width > canvasWidth * 0.90 && word.length > 3) {
+      let splitIdx = Math.floor(word.length / 2);
+      while (splitIdx > 1 && ctx.measureText(word.slice(0, splitIdx)).width > canvasWidth * 0.90) {
+        splitIdx--;
+      }
+      const part = word.slice(0, splitIdx);
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = "";
+      }
+      lines.push(part);
+      word = word.slice(splitIdx);
+    }
     const testLine = currentLine ? `${currentLine} ${word}` : word;
     const metrics = ctx.measureText(testLine);
     if (metrics.width > canvasWidth * 0.92 && currentLine) {
@@ -498,13 +511,13 @@ export function generateStandaloneViewerHtml(glbBuffer: ArrayBuffer, modelTitle:
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 1000);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 1.4));
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.6);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 0.95));
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight1.position.set(4, 6, 5);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
-    dirLight2.position.set(-4, -2, -3);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dirLight2.position.set(-4, 2, -3);
     scene.add(dirLight2);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -805,13 +818,13 @@ class TriQRModel extends HTMLElement {
 
     this._camera = new THREE.PerspectiveCamera(38, 1, 0.05, 1000);
 
-    this._scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 1.4));
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.6);
+    this._scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 0.95));
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight1.position.set(4, 6, 5);
     this._scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
-    dirLight2.position.set(-4, -2, -3);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dirLight2.position.set(-4, 2, -3);
     this._scene.add(dirLight2);
 
     this._controls = new OrbitControls(this._camera, canvas);
@@ -1107,13 +1120,13 @@ export default function TriQRModel({
 
     const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 1000);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 1.4));
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.6);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd0c4b8, 0.95));
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight1.position.set(4, 6, 5);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.7);
-    dirLight2.position.set(-4, -2, -3);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.35);
+    dirLight2.position.set(-4, 2, -3);
     scene.add(dirLight2);
 
     const controls = new OrbitControls(camera, canvas);

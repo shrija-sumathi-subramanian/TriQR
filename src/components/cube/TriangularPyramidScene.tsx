@@ -22,6 +22,7 @@ import {
 
 import type { GeneratedQR, FaceAssignments } from "@/lib/qr-types";
 import type { AppearanceSettings } from "@/lib/appearance-types";
+import { getTriangularPyramidFaceLayout } from "@/lib/face-text-layout";
 import useFaceCameraRotation from "./useFaceCameraRotation";
 
 type Point = [number, number, number];
@@ -86,19 +87,22 @@ function QRContent({
   faceId?: string;
 }) {
   const texture = useTexture(qr.qrCode);
-  const faceUnit = Math.min(faceWidth, faceHeight);
-  const textSize = Math.min(appearance.fontSize * 0.28, faceUnit * 0.075);
-  const qrSize = faceUnit * 0.27;
+  const layout = getTriangularPyramidFaceLayout(
+    faceWidth,
+    faceHeight,
+    appearance.fontSize,
+    qr.displayName || ""
+  );
 
   return (
     <group>
       <Text
-        position={[0, faceHeight * 0.19, 0.035]}
-        fontSize={textSize}
+        position={layout.labelPosition}
+        fontSize={layout.labelFontSize}
         color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
-        maxWidth={faceWidth * 0.46}
+        maxWidth={layout.labelMaxWidth}
         textAlign="center"
         fontWeight={
           appearance.font === "bold-display" ? "bold" : "normal"
@@ -110,9 +114,9 @@ function QRContent({
 
       <mesh
         name={faceId ? `TriQR_QR_${faceId}` : "TriQR_QR"}
-        position={[0, -faceHeight * 0.105, 0.035]}
+        position={layout.qrPosition}
       >
-        <planeGeometry args={[qrSize, qrSize]} />
+        <planeGeometry args={[layout.qrSize, layout.qrSize]} />
         <meshBasicMaterial
           map={texture}
           side={DoubleSide}
@@ -201,8 +205,13 @@ function TriangleFace({
   }, [points]);
 
   const finish = getFinish(appearance.finish);
-  const faceUnit = Math.min(width, height);
-  const textSize = Math.min(appearance.fontSize * 0.28, faceUnit * 0.075);
+  const nameLayout = getTriangularPyramidFaceLayout(
+    width,
+    height,
+    appearance.fontSize,
+    "",
+    cubeName || "Your Identity"
+  );
 
   return (
     <group
@@ -239,12 +248,12 @@ function TriangleFace({
       >
         {isNameFace ? (
           <Text
-            position={[0, 0, 0.035]}
-            fontSize={textSize}
+            position={nameLayout.namePosition}
+            fontSize={nameLayout.nameFontSize}
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={width * 0.46}
+            maxWidth={nameLayout.nameMaxWidth}
             textAlign="center"
             overflowWrap="break-word"
             fontWeight={
@@ -264,11 +273,11 @@ function TriangleFace({
         ) : (
           <Text
             position={[0, 0, 0.035]}
-            fontSize={textSize}
+            fontSize={nameLayout.nameFontSize * 0.85}
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={width * 0.42}
+            maxWidth={nameLayout.nameMaxWidth * 0.85}
             textAlign="center"
             overflowWrap="break-word"
             fontWeight={
@@ -363,11 +372,16 @@ export default function TriangularPyramidScene({
 
   return (
     <>
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={0.95} />
 
       <directionalLight
         position={[4, 6, 5]}
-        intensity={1.2}
+        intensity={1.0}
+      />
+
+      <directionalLight
+        position={[-4, 2, -3]}
+        intensity={0.35}
       />
 
       <Environment preset="studio" />

@@ -73,7 +73,7 @@ export default function IdentityCube({
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
   return (
-    <section className="cube-viewer">
+    <section className="cube-viewer" id="preview">
       <div className="cube-heading">
         <div>
           <p className="eyebrow">YOUR 3D IDENTITY</p>
@@ -155,11 +155,13 @@ export default function IdentityCube({
         onReset={resetAppearance}
       />
 
-      <DownloadOptions
-        modelRef={shapeRef}
-        modelName={cubeName || "triqr-identity"}
-        shapeName={shapeTitle}
-      />
+      <div id="download">
+        <DownloadOptions
+          modelRef={shapeRef}
+          modelName={cubeName || "triqr-identity"}
+          shapeName={shapeTitle}
+        />
+      </div>
     </section>
   );
 }

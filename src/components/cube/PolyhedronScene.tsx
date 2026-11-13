@@ -28,6 +28,7 @@ import type { AppearanceSettings } from "@/lib/appearance-types";
 import type { ShapeId } from "@/lib/shape-config";
 import type { RefObject } from "react";
 import { Group } from "three";
+import { getPolyhedronFaceLayout } from "@/lib/face-text-layout";
 import useFaceCameraRotation from "./useFaceCameraRotation";
 
 type PolyhedronSceneProps = {
@@ -273,34 +274,21 @@ function QRFaceContent({
   appearance: AppearanceSettings;
 }) {
   const texture = useTexture(qr.qrCode);
-
-  const baseFontSize = appearance.fontSize * 0.30;
-  const isTriangle = face.vertexCount === 3;
-
-  // Triangular faces narrow toward their edges. Keep the QR in the
-  // central safe area instead of sizing it from the full bounding box.
-  const qrSize = isTriangle
-    ? Math.min(face.width * 0.30, face.height * 0.30)
-    : Math.min(face.width * 0.36, face.height * 0.32);
-
-  const labelSize = Math.min(
-    baseFontSize,
-    face.width * (isTriangle ? 0.075 : 0.085),
-    face.height * 0.095
+  const layout = getPolyhedronFaceLayout(
+    face,
+    appearance.fontSize,
+    qr.displayName || ""
   );
-
-  const labelY = isTriangle ? face.height * 0.29 : face.height * 0.27;
-  const qrY = isTriangle ? -face.height * 0.075 : -face.height * 0.09;
 
   return (
     <group>
       <Text
-        position={[0, labelY, 0.035]}
-        fontSize={labelSize}
+        position={layout.labelPosition}
+        fontSize={layout.labelFontSize}
         color={appearance.fontColor}
         anchorX="center"
         anchorY="middle"
-        maxWidth={face.width * (isTriangle ? 0.58 : 0.72)}
+        maxWidth={layout.labelMaxWidth}
         textAlign="center"
         fontWeight={
           appearance.font === "bold-display" ? "bold" : "normal"
@@ -312,9 +300,9 @@ function QRFaceContent({
 
       <mesh
         name={`TriQR_QR_${face.id}`}
-        position={[0, qrY, 0.035]}
+        position={layout.qrPosition}
       >
-        <planeGeometry args={[qrSize, qrSize]} />
+        <planeGeometry args={[layout.qrSize, layout.qrSize]} />
 
         <meshBasicMaterial
           map={texture}
@@ -347,10 +335,11 @@ function PolyhedronFace({
   selectedFaceId: string;
   onFaceSelect?: (faceId: string, faceRotation: Quaternion) => void;
 }) {
-  const textSize = Math.min(
-    appearance.fontSize * 0.35,
-    face.width * 0.095,
-    face.height * 0.12
+  const nameLayout = getPolyhedronFaceLayout(
+    face,
+    appearance.fontSize,
+    "",
+    cubeName || "Your Identity"
   );
 
   return (
@@ -390,12 +379,12 @@ function PolyhedronFace({
       >
         {face.id === "name-face" ? (
           <Text
-            position={[0, 0, 0.035]}
-            fontSize={textSize}
+            position={nameLayout.namePosition}
+            fontSize={nameLayout.nameFontSize}
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={face.width * 0.72}
+            maxWidth={nameLayout.nameMaxWidth}
             textAlign="center"
             fontWeight={
               appearance.font === "bold-display" ? "bold" : "normal"
@@ -413,12 +402,16 @@ function PolyhedronFace({
         ) : (
           <Text
             position={[0, 0, 0.035]}
-            fontSize={textSize}
+            fontSize={nameLayout.nameFontSize * 0.85}
             color={appearance.fontColor}
             anchorX="center"
             anchorY="middle"
-            maxWidth={face.width * 0.68}
+            maxWidth={nameLayout.nameMaxWidth * 0.85}
             textAlign="center"
+            overflowWrap="break-word"
+            fontWeight={
+              appearance.font === "bold-display" ? "bold" : "normal"
+            }
           >
             Empty face
           </Text>
@@ -474,11 +467,16 @@ export default function PolyhedronScene({
 
   return (
     <>
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={0.95} />
 
       <directionalLight
         position={[4, 6, 5]}
-        intensity={1.2}
+        intensity={1.0}
+      />
+
+      <directionalLight
+        position={[-4, 2, -3]}
+        intensity={0.35}
       />
 
       <Environment preset="studio" />
